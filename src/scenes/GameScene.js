@@ -42,7 +42,7 @@ export class GameScene extends Phaser.Scene {
     this.player.setDepth(10);
     this.physics.add.collider(this.player, this.grounds);
 
-    this.aliens = this.physics.add.group({ classType: Alien, maxSize: 10 });
+    this.aliens = this.physics.add.group({ classType: Alien, maxSize: 10, runChildUpdate: true });
     this.projectiles = this.physics.add.group();
     this.boss = null;
 
@@ -194,6 +194,7 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         if (this.boss && this.boss.body) {
           this.boss.body.enable = true;
+          this.boss.body.reset(this.boss.x, this.boss.y);
         }
         this.bossIntroActive = false;
         this.time.delayedCall(700, () => {
@@ -227,8 +228,12 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  update() {
+  update(time, delta) {
     if (!this.player || !this.player.active) return;
+
+    if (this.boss && this.boss.active && !this.bossIntroActive) {
+      this.boss.update(time, delta);
+    }
 
     if (this.cursors.left.isDown) {
       this.player.moveLeft();
@@ -246,9 +251,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.z)) {
-      this.player.doAttack(this, this.aliens);
       if (this.boss && this.boss.active && !this.bossIntroActive) {
         this.player.doAttackSingle(this, this.boss);
+      } else {
+        this.player.doAttack(this, this.aliens);
       }
     }
 
