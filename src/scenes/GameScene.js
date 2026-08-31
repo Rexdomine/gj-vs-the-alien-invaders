@@ -235,6 +235,19 @@ export class GameScene extends Phaser.Scene {
       this.boss.update(time, delta);
     }
 
+    // Fail-safe geometric overlap for boss: if Arcade overlap misses,
+    // AABB bounds check catches projectile hits reliably.
+    if (this.boss && this.boss.active && !this.bossIntroActive) {
+      const bossBounds = this.boss.getBounds();
+      this.projectiles.getChildren().forEach((proj) => {
+        if (!proj.active || !proj.body) return;
+        const projBounds = proj.getBounds();
+        if (Phaser.Geom.Rectangle.Overlaps(bossBounds, projBounds)) {
+          this.handleProjectileHit(proj, this.boss);
+        }
+      });
+    }
+
     if (this.cursors.left.isDown) {
       this.player.moveLeft();
     } else if (this.cursors.right.isDown) {
@@ -251,11 +264,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.z)) {
-      if (this.boss && this.boss.active && !this.bossIntroActive) {
-        this.player.doAttackSingle(this, this.boss);
-      } else {
-        this.player.doAttack(this, this.aliens);
-      }
+      this.player.doAttack(this);
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.x)) {

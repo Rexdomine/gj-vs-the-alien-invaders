@@ -22,6 +22,9 @@ export const SPECIAL_RANGE_Y = 90;
 export const SPECIAL_PROJECTILE_SPEED = 520;
 export const SPECIAL_PROJECTILE_LIFETIME = 2200; // ms
 
+export const NORMAL_PROJECTILE_SPEED = 350;
+export const NORMAL_PROJECTILE_LIFETIME = 1500; // ms
+
 // Enemies
 export const ALIEN_HP = 50;
 export const ALIEN_SPEED = 90;

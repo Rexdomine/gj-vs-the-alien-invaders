@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import {
   PLAYER_SPEED, PLAYER_JUMP, PLAYER_GRAVITY,
-  PLAYER_MAX_HP, ATTACK_DAMAGE, ATTACK_COOLDOWN, ATTACK_RANGE_X, ATTACK_RANGE_Y,
+  PLAYER_MAX_HP, ATTACK_DAMAGE, ATTACK_COOLDOWN,
   SPECIAL_DAMAGE, SPECIAL_COOLDOWN, SPECIAL_PROJECTILE_SPEED, SPECIAL_PROJECTILE_LIFETIME,
+  NORMAL_PROJECTILE_SPEED, NORMAL_PROJECTILE_LIFETIME,
 } from '../game/config.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
@@ -56,68 +57,56 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   canSpecial() { return Date.now() - this.lastSpecial > SPECIAL_COOLDOWN; }
 
   doAttack(scene, targetGroup) {
-    if (!this.canAttack()) return;
-    this.isAttacking = true;
-    this.lastAttack = Date.now();
-
-    const cx = this.x + (this.facing === 'right' ? ATTACK_RANGE_X / 2 : -ATTACK_RANGE_X / 2);
-    const cy = this.y;
-    const hitbox = scene.add.rectangle(cx, cy, ATTACK_RANGE_X, ATTACK_RANGE_Y).setVisible(false);
-    scene.physics.add.existing(hitbox);
-
-    scene.physics.overlap(hitbox, targetGroup, (hitboxObj, target) => {
-      if (target.active && target.hp > 0) {
-        target.takeHit(ATTACK_DAMAGE, scene);
-      }
-    });
-
-    // Visual hit flash on target (simple)
-    scene.time.delayedCall(150, () => { if (hitbox) hitbox.destroy(); });
-
-    // Small punch visual
-    const punch = scene.add.circle(this.x + (this.facing === 'right' ? 40 : -40), this.y, 10, 0xffffff, 0.8);
-    scene.tweens.add({ targets: punch, alpha: 0, scale: 2, duration: 150, onComplete: () => punch.destroy() });
+    return this.fireProjectile(scene, ATTACK_DAMAGE, NORMAL_PROJECTILE_SPEED, NORMAL_PROJECTILE_LIFETIME, false);
   }
 
   doSpecial(scene) {
     if (!this.canSpecial()) return null;
+    return this.fireProjectile(scene, SPECIAL_DAMAGE, SPECIAL_PROJECTILE_SPEED, SPECIAL_PROJECTILE_LIFETIME, true);
+  }
+
+  fireProjectile(scene, damage, speed, lifetime, isSpecial) {
+    if (isSpecial) {
+      if (!this.canSpecial()) return null;
+      this.lastSpecial = Date.now();
+    } else {
+      if (!this.canAttack()) return null;
+      this.lastAttack = Date.now();
+    }
     this.isAttacking = true;
-    this.lastSpecial = Date.now();
 
     const dir = this.facing === 'right' ? 1 : -1;
-    const blast = scene.physics.add.image(this.x + dir * 60, this.y - 10, 'blast').setScale(1.2);
-    scene.projectiles?.add(blast);
-    blast.setDepth(12);
-    blast.body.setAllowGravity(false);
-    blast.body.setImmovable(true);
-    blast.setVelocityX(dir * SPECIAL_PROJECTILE_SPEED);
-    blast.setData('damage', SPECIAL_DAMAGE);
+    const offsetX = isSpecial ? 60 : 40;
+    const offsetY = -10;
+    const scale = isSpecial ? 1.2 : 0.8;
+    const depth = isSpecial ? 12 : 11;
 
-    scene.time.delayedCall(SPECIAL_PROJECTILE_LIFETIME, () => {
-      if (blast && blast.active) {
-        blast.destroy();
+    const proj = scene.physics.add.image(this.x + dir * offsetX, this.y + offsetY, 'blast').setScale(scale);
+    scene.projectiles?.add(proj);
+    proj.setDepth(depth);
+    proj.body.setAllowGravity(false);
+    proj.body.setImmovable(true);
+    proj.setVelocityX(dir * speed);
+    proj.setData('damage', damage);
+    proj.setData('pierce', false);
+    if (isSpecial) {
+      // Tint special slightly differently for visual clarity
+      proj.setTint(0xfacc15);
+    } else {
+      proj.setTint(0xbfdbfe);
+    }
+
+    scene.time.delayedCall(lifetime, () => {
+      if (proj && proj.active) {
+        proj.destroy();
       }
     });
 
-    return blast;
+    return proj;
   }
 
   doAttackSingle(scene, target) {
-    if (!this.canAttack()) return;
-    this.isAttacking = true;
-    this.lastAttack = Date.now();
-    const cx = this.x + (this.facing === 'right' ? ATTACK_RANGE_X / 2 : -ATTACK_RANGE_X / 2);
-    const cy = this.y;
-    const hitbox = scene.add.rectangle(cx, cy, ATTACK_RANGE_X, ATTACK_RANGE_Y).setVisible(false);
-    scene.physics.add.existing(hitbox);
-    scene.physics.overlap(hitbox, target, () => {
-      if (target.active && target.hp > 0) {
-        target.takeHit(ATTACK_DAMAGE, scene);
-      }
-      scene.time.delayedCall(150, () => { if (hitbox) hitbox.destroy(); });
-    });
-    const punch = scene.add.circle(this.x + (this.facing === 'right' ? 40 : -40), this.y, 10, 0xffffff, 0.8);
-    scene.tweens.add({ targets: punch, alpha: 0, scale: 2, duration: 150, onComplete: () => punch.destroy() });
+    return this.doAttack(scene, target);
   }
 
   doSpecialSingle(scene, target) {

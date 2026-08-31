@@ -11,6 +11,13 @@ export class BossAlien extends Phaser.Physics.Arcade.Sprite {
     this.lastContact = 0;
     this.setScale(1.5);
     this.setDepth(5);
+    // Ensure the Arcade physics body matches the scaled visual so projectiles
+    // (and the player) reliably hit the boss. setScale alone does not resize body.
+    if (this.body) {
+      // Scale has been applied; resize body to match scaled sprite.
+      // setSize(center=true) centers the body on the sprite.
+      this.body.setSize(this.width, this.height, true);
+    }
   }
 
   update(time, delta) {
