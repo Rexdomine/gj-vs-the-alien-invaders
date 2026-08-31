@@ -88,19 +88,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const blast = scene.physics.add.image(this.x + dir * 60, this.y - 10, 'blast').setScale(1.2);
     scene.projectiles?.add(blast);
     blast.setDepth(12);
-    blast.body.allowGravity = false;
+    blast.body.setAllowGravity(false);
+    blast.body.setImmovable(true);
     blast.setVelocityX(dir * SPECIAL_PROJECTILE_SPEED);
     blast.setData('damage', SPECIAL_DAMAGE);
-    blast.setData('hitTargets', new Set());
-
-    scene.tweens.add({
-      targets: blast,
-      angle: dir * 360,
-      alpha: { from: 1, to: 0.92 },
-      duration: 220,
-      yoyo: true,
-      repeat: Math.ceil(SPECIAL_PROJECTILE_LIFETIME / 220),
-    });
 
     scene.time.delayedCall(SPECIAL_PROJECTILE_LIFETIME, () => {
       if (blast && blast.active) {

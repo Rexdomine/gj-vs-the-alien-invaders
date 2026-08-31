@@ -212,10 +212,8 @@ export class GameScene extends Phaser.Scene {
   handleProjectileHit(projectile, target) {
     if (!projectile?.active || !target?.active || target.hp <= 0) return;
 
-    const hitTargets = projectile.getData('hitTargets');
-    if (hitTargets && hitTargets.has(target)) return;
-
-    if (hitTargets) hitTargets.add(target);
+    projectile.disableBody(true, true);
+    projectile.destroy();
     target.takeHit(projectile.getData('damage') ?? 0, this);
 
     target.setTint(0xfff08a);
