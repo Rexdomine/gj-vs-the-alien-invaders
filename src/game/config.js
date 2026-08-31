@@ -29,6 +29,7 @@ export const ALIEN_DAMAGE = 10;
 export const ALIEN_CONTACT_COOLDOWN = 800; // ms
 export const ALIEN_SCORE = 10;
 export const ALIEN_SPAWN_INTERVAL = 2500;  // ms
+export const ALIENS_TO_BOSS = 8;
 
 // Boss
 export const BOSS_HP = 500;
@@ -36,7 +37,6 @@ export const BOSS_SPEED = 45;
 export const BOSS_DAMAGE = 25;
 export const BOSS_CONTACT_COOLDOWN = 600;
 export const BOSS_SCORE = 200;
-export const SCORE_FOR_BOSS = 150;         // score threshold to spawn boss
 
 // HUD
 export const HUD_PADDING = 16;

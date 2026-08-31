@@ -4,8 +4,8 @@ import { Alien } from '../entities/Alien.js';
 import { BossAlien } from '../entities/BossAlien.js';
 import {
   WORLD_WIDTH, WORLD_HEIGHT,
-  ALIEN_SPAWN_INTERVAL, ALIEN_DAMAGE, ALIEN_CONTACT_COOLDOWN,
-  BOSS_DAMAGE, BOSS_CONTACT_COOLDOWN, SCORE_FOR_BOSS, SPECIAL_COOLDOWN,
+  ALIEN_SPAWN_INTERVAL, ALIEN_DAMAGE, ALIEN_CONTACT_COOLDOWN, ALIENS_TO_BOSS,
+  BOSS_DAMAGE, BOSS_CONTACT_COOLDOWN, SPECIAL_COOLDOWN,
 } from '../game/config.js';
 
 export class GameScene extends Phaser.Scene {
@@ -21,6 +21,7 @@ export class GameScene extends Phaser.Scene {
 
     this.bossSpawned = false;
     this.bossIntroActive = false;
+    this.alienDefeats = 0;
 
     this.cameras.main.setBackgroundColor('#120a1f');
     for (let i = 0; i < 40; i++) {
@@ -48,7 +49,7 @@ export class GameScene extends Phaser.Scene {
     this.alienTimer = this.time.addEvent({
       delay: ALIEN_SPAWN_INTERVAL,
       callback: () => {
-        if (this.player.active && !this.bossSpawned && !this.bossIntroActive) {
+        if (this.player.active && !this.bossSpawned && !this.bossIntroActive && this.alienDefeats < ALIENS_TO_BOSS) {
           const spawnX = Phaser.Math.Clamp(this.player.x + Phaser.Math.Between(320, 520), 80, this.worldWidth - 80);
           const a = this.aliens.get(spawnX, 480, 'alien');
           if (a) {
@@ -79,8 +80,9 @@ export class GameScene extends Phaser.Scene {
       this.handleProjectileHit(projectile, alien);
     }, null, this);
 
-    this.events.on('score-change', (score) => {
-      if (score >= SCORE_FOR_BOSS && !this.bossSpawned) {
+    this.events.on('alien-defeated', () => {
+      this.alienDefeats += 1;
+      if (this.alienDefeats >= ALIENS_TO_BOSS && !this.bossSpawned) {
         this.spawnBoss();
       }
     });
@@ -109,6 +111,11 @@ export class GameScene extends Phaser.Scene {
 
     this.hudSpecial = this.add.text(16, 80, 'Energy Kick: Ready', {
       fontFamily: 'Segoe UI', fontSize: '16px', color: '#facc15',
+      stroke: '#000', strokeThickness: 3,
+    }).setScrollFactor(0).setDepth(100);
+
+    this.hudProgress = this.add.text(16, 108, '', {
+      fontFamily: 'Segoe UI', fontSize: '16px', color: '#93c5fd',
       stroke: '#000', strokeThickness: 3,
     }).setScrollFactor(0).setDepth(100);
 
@@ -145,12 +152,15 @@ export class GameScene extends Phaser.Scene {
 
     this.bossSpawned = true;
     this.bossIntroActive = true;
-    this.alienTimer.remove(false);
+    if (this.alienTimer) {
+      this.alienTimer.remove(false);
+      this.alienTimer = null;
+    }
     this.clearAliensForBossIntro();
 
-    const viewRight = this.cameras.main.worldView.right;
-    const introStartX = Phaser.Math.Clamp(viewRight + 140, 120, this.worldWidth - 60);
-    const introTargetX = Phaser.Math.Clamp(viewRight - 140, 160, this.worldWidth - 160);
+    const view = this.cameras.main.worldView;
+    const introStartX = Math.min(this.worldWidth - 80, view.right + 220);
+    const introTargetX = Math.min(this.worldWidth - 180, view.right - 120);
 
     this.boss = new BossAlien(this, introStartX, 460);
     this.boss.setDepth(12);
@@ -251,6 +261,9 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.hudScore.setText('Score: ' + this.player.score);
+    const remainingForBoss = Math.max(0, ALIENS_TO_BOSS - this.alienDefeats);
+    this.hudProgress.setText(this.bossSpawned ? 'Boss Fight Active!' : `Aliens until boss: ${remainingForBoss}`);
+
     const hp = this.player.hp;
     const pct = Math.max(0, Math.round((hp / 100) * 100));
     this.hudHPText.setText('HP: ' + hp);

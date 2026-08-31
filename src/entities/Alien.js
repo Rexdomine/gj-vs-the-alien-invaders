@@ -39,6 +39,11 @@ export class Alien extends Phaser.Physics.Arcade.Sprite {
     if (this.hp <= 0) {
       this.setActive(false);
       this.setVisible(false);
+      if (this.body) {
+        this.body.enable = false;
+        this.setVelocity(0, 0);
+      }
+      scene.events.emit('alien-defeated');
       // Score via player reference if available
       if (scene.player && scene.player.active) {
         scene.player.addScore(ALIEN_SCORE, scene);
