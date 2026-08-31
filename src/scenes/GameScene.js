@@ -210,15 +210,20 @@ export class GameScene extends Phaser.Scene {
   }
 
   handleProjectileHit(projectile, target) {
-    if (!projectile?.active || !target?.active || target.hp <= 0) return;
+    const projectileObject = projectile?.gameObject ?? projectile;
+    const targetObject = target?.gameObject ?? target;
 
-    projectile.disableBody(true, true);
-    projectile.destroy();
-    target.takeHit(projectile.getData('damage') ?? 0, this);
+    if (!projectileObject?.active || !targetObject?.active || targetObject.hp <= 0) return;
+    if (typeof targetObject.takeHit !== 'function') return;
 
-    target.setTint(0xfff08a);
+    const damage = projectileObject.getData?.('damage') ?? 0;
+    projectileObject.disableBody?.(true, true);
+    projectileObject.destroy?.();
+    targetObject.takeHit(damage, this);
+
+    targetObject.setTint(0xfff08a);
     this.time.delayedCall(80, () => {
-      if (target.active) target.clearTint();
+      if (targetObject.active) targetObject.clearTint();
     });
   }
 
