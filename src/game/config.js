@@ -19,6 +19,8 @@ export const SPECIAL_DAMAGE = 60;
 export const SPECIAL_COOLDOWN = 4000;     // ms
 export const SPECIAL_RANGE_X = 100;
 export const SPECIAL_RANGE_Y = 90;
+export const SPECIAL_PROJECTILE_SPEED = 520;
+export const SPECIAL_PROJECTILE_LIFETIME = 2200; // ms
 
 // Enemies
 export const ALIEN_HP = 50;

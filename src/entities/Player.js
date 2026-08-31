@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import {
   PLAYER_SPEED, PLAYER_JUMP, PLAYER_GRAVITY,
   PLAYER_MAX_HP, ATTACK_DAMAGE, ATTACK_COOLDOWN, ATTACK_RANGE_X, ATTACK_RANGE_Y,
-  SPECIAL_DAMAGE, SPECIAL_COOLDOWN, SPECIAL_RANGE_X, SPECIAL_RANGE_Y,
+  SPECIAL_DAMAGE, SPECIAL_COOLDOWN, SPECIAL_PROJECTILE_SPEED, SPECIAL_PROJECTILE_LIFETIME,
 } from '../game/config.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
@@ -79,27 +79,36 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.tweens.add({ targets: punch, alpha: 0, scale: 2, duration: 150, onComplete: () => punch.destroy() });
   }
 
-  doSpecial(scene, targetGroup) {
-    if (!this.canSpecial()) return;
+  doSpecial(scene) {
+    if (!this.canSpecial()) return null;
     this.isAttacking = true;
     this.lastSpecial = Date.now();
 
-    const cx = this.x + (this.facing === 'right' ? SPECIAL_RANGE_X / 2 : -SPECIAL_RANGE_X / 2);
-    const hitbox = scene.add.rectangle(cx, this.y, SPECIAL_RANGE_X, SPECIAL_RANGE_Y).setVisible(false);
-    scene.physics.add.existing(hitbox);
+    const dir = this.facing === 'right' ? 1 : -1;
+    const blast = scene.physics.add.image(this.x + dir * 60, this.y - 10, 'blast').setScale(1.2);
+    scene.projectiles?.add(blast);
+    blast.setDepth(12);
+    blast.body.allowGravity = false;
+    blast.setVelocityX(dir * SPECIAL_PROJECTILE_SPEED);
+    blast.setData('damage', SPECIAL_DAMAGE);
+    blast.setData('hitTargets', new Set());
 
-    scene.physics.overlap(hitbox, targetGroup, (hitboxObj, target) => {
-      if (target.active && target.hp > 0) {
-        target.takeHit(SPECIAL_DAMAGE, scene);
+    scene.tweens.add({
+      targets: blast,
+      angle: dir * 360,
+      alpha: { from: 1, to: 0.92 },
+      duration: 220,
+      yoyo: true,
+      repeat: Math.ceil(SPECIAL_PROJECTILE_LIFETIME / 220),
+    });
+
+    scene.time.delayedCall(SPECIAL_PROJECTILE_LIFETIME, () => {
+      if (blast && blast.active) {
+        blast.destroy();
       }
     });
 
-    scene.time.delayedCall(200, () => { if (hitbox) hitbox.destroy(); });
-
-    // Energy blast visual
-    const blast = scene.add.image(this.x + (this.facing === 'right' ? 60 : -60), this.y, 'blast').setScale(1.2);
-    blast.setDepth(10);
-    scene.tweens.add({ targets: blast, x: cx + (this.facing === 'right' ? 60 : -60), alpha: 0, duration: 300, onComplete: () => blast.destroy() });
+    return blast;
   }
 
   doAttackSingle(scene, target) {
@@ -121,21 +130,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   doSpecialSingle(scene, target) {
-    if (!this.canSpecial()) return;
-    this.isAttacking = true;
-    this.lastSpecial = Date.now();
-    const cx = this.x + (this.facing === 'right' ? SPECIAL_RANGE_X / 2 : -SPECIAL_RANGE_X / 2);
-    const hitbox = scene.add.rectangle(cx, this.y, SPECIAL_RANGE_X, SPECIAL_RANGE_Y).setVisible(false);
-    scene.physics.add.existing(hitbox);
-    scene.physics.overlap(hitbox, target, () => {
-      if (target.active && target.hp > 0) {
-        target.takeHit(SPECIAL_DAMAGE, scene);
-      }
-      scene.time.delayedCall(200, () => { if (hitbox) hitbox.destroy(); });
-    });
-    const blast = scene.add.image(this.x + (this.facing === 'right' ? 60 : -60), this.y, 'blast').setScale(1.2);
-    blast.setDepth(10);
-    scene.tweens.add({ targets: blast, x: cx + (this.facing === 'right' ? 60 : -60), alpha: 0, duration: 300, onComplete: () => blast.destroy() });
+    return this.doSpecial(scene);
   }
 
   takeHit(amount, scene) {
